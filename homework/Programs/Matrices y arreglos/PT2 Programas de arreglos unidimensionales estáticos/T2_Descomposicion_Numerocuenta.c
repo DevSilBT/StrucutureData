@@ -10,7 +10,7 @@ void llenarPares(int pares[]) {
 
 
 void imprimirInverso(const int arr[]) {
-    printf("\n--- Arreglo en orden inverso ---\n");
+    printf("\nArreglo en orden inverso\n");
     for (int i = N - 1; i >= 0; i--) {
         printf("|%d| ", arr[i]);
     }
@@ -22,7 +22,7 @@ void sustituirDigito(int arr[], int indice) {
     if (indice >= 0 && indice < N) {
         arr[indice] = -1;
     }
-    printf("\n--- Arreglo tras sustituir el último dígito por -1 ---\n");
+    printf("\nArreglo tras sustituir el ultimo digito por -1 \n");
     for (int i = 0; i < N; i++) {
         printf("|%d| ", arr[i]);
     }
@@ -35,7 +35,7 @@ int main() {
 
     llenarPares(pares);
 
-    printf("Ingrese su número de cuenta: ");
+    printf("Ingrese su numero de cuenta: ");
     scanf("%d", &cuenta);
 
     ultimo = cuenta % 10;
