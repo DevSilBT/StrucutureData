@@ -1,72 +1,55 @@
-//POSTFIX LETTERS Portable Version with Verification (Letters, English, Stack Eval - No Traversals)
+// POSTFIX LETTERS Portable Version
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-// #include <windows.h> // Eliminado
 #include "stack.h"
 #include "dlist.h"
 #include "list.h"
 #define MAX_EXPR 256
 
-// --- Definiciones de Secuencias VT100 ---
+// --- VT100 Sequence Definitions ---
 #define RESET_COLOR "\033[0m"
 #define COLOR_RED "\033[1;31m"
 #define COLOR_GREEN "\033[1;32m"
 #define COLOR_YELLOW "\033[1;33m"
 #define COLOR_BLUE "\033[1;34m"
-// Opcional: Puedes definir más si lo deseas
-// #define COLOR_MAGENTA "\033[1;35m"
-// #define COLOR_CYAN "\033[1;36m"
-// #define COLOR_WHITE "\033[1;37m"
 
-// --- Función para limpiar pantalla portable ---
+// --- Portable screen clear function ---
 void clear_screen() {
     printf("\033[2J\033[H");
-    fflush(stdout); // Asegura que la limpieza se aplique inmediatamente
+    fflush(stdout);
 }
-
-/*
-    Initialize color system
-    No longer needed with VT100
-*/
-/*
-void init_colors() {
-    hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-    GetConsoleScreenBufferInfo(hConsole, &consoleInfo);
-    originalAttributes = consoleInfo.wAttributes;
-}
-*/
 
 /*
     Restore original color
 */
-void color_normal() {
+void reset_color() {
     printf(RESET_COLOR);
 }
 
 /*
     Set blue color
 */
-void color_blue() {
+void set_blue() {
     printf(COLOR_BLUE);
 }
 
 /*
     Set green color
 */
-void color_green() {
+void set_green() {
     printf(COLOR_GREEN);
 }
 
-void color_yellow() {
+void set_yellow() {
     printf(COLOR_YELLOW);
 }
 
 /*
     Set red color
 */
-void color_red() {
+void set_red() {
     printf(COLOR_RED);
 }
 
@@ -101,9 +84,9 @@ int validate_syntax(const char *infix) {
     char last_char = '\0';
 
     if (len == 0) {
-        color_red();
+        set_red();
         printf("\n  ERROR: The expression is empty\n");
-        color_normal();
+        reset_color();
         return 0;
     }
 
@@ -113,18 +96,18 @@ int validate_syntax(const char *infix) {
         if (c == ' ') continue;
 
         if (!isalnum(c) && !is_operator(c) && c != '(' && c != ')') {
-            color_red();
+            set_red();
             printf("\n  ERROR: Invalid character '%c' at position %d\n", c, i + 1);
-            color_normal();
+            reset_color();
             return 0;
         }
 
         if (c == '(') {
             parenthesis_balance++;
             if (last_was_operand) {
-                color_red();
+                set_red();
                 printf("\n  ERROR: Missing operator before parenthesis '(' at position %d\n", i + 1);
-                color_normal();
+                reset_color();
                 return 0;
             }
             last_was_operator = 0;
@@ -133,21 +116,21 @@ int validate_syntax(const char *infix) {
         else if (c == ')') {
             parenthesis_balance--;
             if (parenthesis_balance < 0) {
-                color_red();
+                set_red();
                 printf("\n  ERROR: Closing parenthesis ')' without opening at position %d\n", i + 1);
-                color_normal();
+                reset_color();
                 return 0;
             }
             if (last_was_operator) {
-                color_red();
+                set_red();
                 printf("\n  ERROR: Missing operand before closing parenthesis ')' at position %d\n", i + 1);
-                color_normal();
+                reset_color();
                 return 0;
             }
             if (last_char == '(') {
-                color_red();
+                set_red();
                 printf("\n  ERROR: Empty parentheses '()' at position %d\n", i + 1);
-                color_normal();
+                reset_color();
                 return 0;
             }
             last_was_operator = 0;
@@ -155,9 +138,9 @@ int validate_syntax(const char *infix) {
         }
         else if (isalnum(c)) {
             if (last_was_operand) {
-                color_red();
+                set_red();
                 printf("\n  ERROR: Two consecutive operands at position %d (missing operator)\n", i + 1);
-                color_normal();
+                reset_color();
                 return 0;
             }
             last_was_operand = 1;
@@ -165,21 +148,21 @@ int validate_syntax(const char *infix) {
         }
         else if (is_operator(c)) {
             if (last_was_operator) {
-                color_red();
+                set_red();
                 printf("\n  ERROR: Two consecutive operators at position %d\n", i + 1);
-                color_normal();
+                reset_color();
                 return 0;
             }
             if (i == 0) {
-                color_red();
+                set_red();
                 printf("\n  ERROR: The expression cannot start with an operator\n");
-                color_normal();
+                reset_color();
                 return 0;
             }
             if (last_char == '(') {
-                color_red();
+                set_red();
                 printf("\n  ERROR: Operator '%c' after opening parenthesis '(' at position %d\n", c, i + 1);
-                color_normal();
+                reset_color();
                 return 0;
             }
             last_was_operator = 1;
@@ -190,22 +173,22 @@ int validate_syntax(const char *infix) {
     }
 
     if (parenthesis_balance > 0) {
-        color_red();
+        set_red();
         printf("\n  ERROR: Missing %d closing parentheses ')'\n", parenthesis_balance);
-        color_normal();
+        reset_color();
         return 0;
     }
 
     if (last_was_operator) {
-        color_red();
+        set_red();
         printf("\n  ERROR: The expression cannot end with an operator\n");
-        color_normal();
+        reset_color();
         return 0;
     }
 
-    color_green();
+    set_green();
     printf("\n  Valid syntax\n");
-    color_normal();
+    reset_color();
     return 1;
 }
 
@@ -250,9 +233,9 @@ void print_stack(Stack *stack, char new_element, int highlight) {
 
     for (i = 0; i < count; i++) {
         if (highlight && i == 0 && elements[i] == new_element) {
-            color_blue();
+            set_blue();
             printf("%c", elements[i]);
-            color_normal();
+            reset_color();
         } else {
             printf("%c", elements[i]);
         }
@@ -269,7 +252,7 @@ void print_stack(Stack *stack, char new_element, int highlight) {
 }
 
 /*
-    Print expression with last element in blue (from LEFT to RIGHT)
+    Print expression with last element in blue
 */
 void print_colored_operation(const char *operation, int length, int highlight_last) {
     int i;
@@ -292,9 +275,9 @@ void print_colored_operation(const char *operation, int length, int highlight_la
 
     for (i = 0; i < length; i++) {
         if (highlight_last && i == length - 1) {
-            color_blue();
+            set_blue();
             printf("%c", operation[i]);
-            color_normal();
+            reset_color();
         } else {
             printf("%c", operation[i]);
         }
@@ -326,24 +309,24 @@ void infix_to_postfix(const char *infix, char *postfix) {
     stack_init(&stack, free);
 
     printf("\n");
-    color_green();
+    set_green();
     printf("+-------------------------------------------------------------------------------------------------+\n");
     printf("|                          INFIX TO POSTFIX CONVERSION                                           |\n");
     printf("|                                STEP-BY-STEP ALGORITHM                                          |\n");
     printf("+-------------------------------------------------------------------------------------------------+\n");
-    color_normal();
+    reset_color();
 
     printf("\n");
-    color_yellow();
+    set_yellow();
     printf("  Entered Infix Expression: ");
-    color_blue();
+    set_blue();
     printf("%s\n", infix);
-    color_normal();
+    reset_color();
 
     printf("  Traversal Method: ");
-    color_green();
+    set_green();
     printf("LEFT -> RIGHT");
-    color_normal();
+    reset_color();
     printf(" (first element first)\n\n");
 
     printf("+-----------------------------------------------------------------------------------------------------------------+\n");
@@ -416,7 +399,6 @@ void infix_to_postfix(const char *infix, char *postfix) {
                     break;
                 } else {
                     temp_operation[j++] = *op_ptr;
-                    temp_operation[j] = ' ';
                     temp_operation[j] = '\0';
 
                     printf("|  %3d  | POP [%c] (search '(') ", step, *op_ptr);
@@ -443,7 +425,6 @@ void infix_to_postfix(const char *infix, char *postfix) {
                 if (top_op && *top_op != '(' && precedence(*top_op) >= precedence(c)) {
                     stack_pop(&stack, (void **)&op_ptr);
                     temp_operation[j++] = *op_ptr;
-                    temp_operation[j] = ' ';
                     temp_operation[j] = '\0';
 
                     printf("POP [%c] (prec %d>=%d) ", *op_ptr, precedence(*op_ptr), precedence(c));
@@ -483,9 +464,9 @@ void infix_to_postfix(const char *infix, char *postfix) {
     /* Separator before emptying the stack */
     if (stack_size(&stack) > 0) {
         printf("|-------+--------------------------+-------------------------+-----------------------------|\n");
-        color_yellow();
+        set_yellow();
         printf("|       |     EMPTYING STACK       |                         |                             |\n");
-        color_normal();
+        reset_color();
         printf("|-------+--------------------------+-------------------------+-----------------------------|\n");
     }
 
@@ -493,7 +474,6 @@ void infix_to_postfix(const char *infix, char *postfix) {
     while (stack_size(&stack) > 0) {
         stack_pop(&stack, (void **)&op_ptr);
         temp_operation[j++] = *op_ptr;
-        temp_operation[j] = ' ';
         temp_operation[j] = '\0';
 
         printf("|  %3d  | FINAL POP [%c]       ", step, *op_ptr);
@@ -513,24 +493,20 @@ void infix_to_postfix(const char *infix, char *postfix) {
 
     printf("+-----------------------------------------------------------------------------------------------------------------+\n");
 
-    /* Remove final space if exists */
-    if (j > 0 && temp_operation[j-1] == ' ') {
-        temp_operation[j-1] = '\0';
-    }
-
+    /* Copy final result to postfix */
     strcpy(postfix, temp_operation);
 
     printf("\n");
     printf("+-------------------------------------------------------------------------------------------------+\n");
-    color_yellow();
-    printf("|                           FINAL RESULT                                                        |\n");
-    color_normal();
+    set_yellow();
+    printf("|                                              FINAL RESULT                                         |\n");
+    reset_color();
     printf("|-------------------------------------------------------------------------------------------------|\n");
     printf("|                                                                                                 |\n");
     printf("|   Postfix Expression: ");
-    color_blue();
+    set_blue();
     printf("%-58s", postfix);
-    color_normal();
+    reset_color();
     printf(" |\n");
     printf("|                                                                                                 |\n");
     printf("|                                                                                                 |\n");
@@ -540,128 +516,152 @@ void infix_to_postfix(const char *infix, char *postfix) {
 }
 
 /*
-    Function to perform postfix expression verification using stack evaluation (no explicit pattern search)
-    Verifies if the postfix expression with letters is structurally valid.
-    For example: ab+ is valid, abc++ is valid, abc+ is invalid (not enough operands for second +).
+    Function to perform postfix expression verification
 */
-void verify_postfix_stack_eval(const char *postfix) {
-    Stack stack;
-    int i = 0;
-    char token;
-    char *op1, *op2;
-    char *result;
-    int error = 0; // Flag to indicate if an error occurred
+void verify_postfix(const char *postfix) {
+    char expression[MAX_EXPR];
+    char result[MAX_EXPR];
+    int i, j, k;
+    int step = 1;
+    char new_letter = 'Z';
 
-    stack_init(&stack, free); // Initialize stack, destroy function for char pointers
+    strcpy(expression, postfix);
+
+    printf("\n\n");
+    set_green();
+    printf("+-------------------------------------------------------------------------------------------------+\n");
+    printf("|                            POSTFIX EXPRESSION VERIFICATION                                      |\n");
+    printf("|                          SUBSTITUTION STEP-BY-STEP ALGORITHM                                    |\n");
+    printf("+-------------------------------------------------------------------------------------------------+\n");
+    reset_color();
 
     printf("\n");
-    color_green();
-    printf("+-------------------------------------------------------------------------------------------------+\n");
-    printf("|                          POSTFIX EXPRESSION VERIFICATION (Stack Eval)                           |\n");
-    printf("|                            STRUCTURAL CHECK - NO TRAVERSALS                                     |\n");
-    printf("+-------------------------------------------------------------------------------------------------+\n");
-    color_normal();
+    set_yellow();
+    printf("  Original Postfix Expression: ");
+    set_blue();
+    printf("%s\n", expression);
+    reset_color();
+
+    printf("  Traversal Method: ");
+    set_green();
+    printf("SEARCH SEQUENCE: LETTER, LETTER, OPERATION\n");
+    reset_color();
 
     printf("\n");
-    color_yellow();
-    printf("  Postfix Expression to Verify: ");
-    color_blue();
-    printf("%s\n", postfix);
-    color_normal();
+    set_green();
+    printf("+-------------------------------------------------------------------------------------------------+\n");
+    reset_color();
+    printf("| STEP |    SEQUENCE FOUND         |   SUBSTITUTION   |        UPDATED EXPRESSION                |\n");
+    printf("|------+----------------------------+-----------------+------------------------------------------|\n");
 
-    printf("  Method: Stack-based evaluation (structural check)\n\n");
+    /* Perform verification while there are operators in the expression */
+    while (1) {
+        int found = 0;
+        int len = strlen(expression);
 
-    // Process each character in the postfix expression
-    while ((token = postfix[i++]) != '\0') {
-        if (token == ' ') continue; // Skip spaces
-
-        if (isalpha(token)) {
-            // If it's a letter (operand), push it onto the stack
-            char *letter_ptr = (char *)malloc(sizeof(char));
-            *letter_ptr = token;
-            stack_push(&stack, letter_ptr);
-            printf("  Pushed operand '%c' onto stack. Stack size: %d\n", token, stack_size(&stack));
-        }
-        else if (is_operator(token)) {
-            // If it's an operator, check if there are at least 2 operands in the stack
-            if (stack_size(&stack) < 2) {
-                printf("  ERROR: Operator '%c' requires 2 operands, but stack only has %d element(s).\n", token, stack_size(&stack));
-                error = 1;
-                break; // Stop verification if error is found
+        /* Search pattern: letter, letter, operation */
+        for (i = 0; i < len - 2; i++) {
+            if (isalpha(expression[i]) && isalpha(expression[i+1]) && is_operator(expression[i+2])) {
+                found = 1;
+                break;
             }
-            // Pop two operands (order matters for non-commutative ops, but for structure, just pop)
-            stack_pop(&stack, (void**)&op2);
-            stack_pop(&stack, (void**)&op1);
-            printf("  Popped '%c' and '%c' for operator '%c'.\n", *op1, *op2, token);
-
-            // Push a dummy result (or the result of a symbolic operation) back onto the stack
-            result = (char *)malloc(sizeof(char));
-            // For verification, we can use a placeholder like 'X' to represent the result of op1 op op2.
-            // Here, we'll use a placeholder like 'X' to represent the result of op1 op op2.
-            *result = 'X'; // Could be more sophisticated, e.g., use a counter or combine op1, op2, op
-            stack_push(&stack, result);
-            printf("  Pushed result 'X' back onto stack. Stack size: %d\n", stack_size(&stack));
-
-            // Free the memory of the popped operands
-            free(op1);
-            free(op2);
         }
-        else {
-            // This case should ideally be caught by validate_syntax, but good to check
-            printf("  ERROR: Invalid token '%c' found in expression.\n", token);
-            error = 1;
-            break;
+
+        if (!found) {
+            /* Check if any unprocessed operator remains */
+            for (i = 0; i < len; i++) {
+                if (is_operator(expression[i])) {
+                    found = 1;
+                    /* Search operands for this operator */
+                    for (j = i - 1; j >= 0; j--) {
+                        if (isalpha(expression[j])) {
+                            for (k = j - 1; k >= 0; k--) {
+                                if (isalpha(expression[k])) {
+                                    i = k; /* Adjust i to use found operands */
+                                    break;
+                                }
+                            }
+                            break;
+                        }
+                    }
+                    break;
+                }
+            }
+
+            if (!found) {
+                break; /* No more operators */
+            }
+        }
+
+        /* Perform substitution */
+        if (found) {
+            char letter1 = expression[i];
+            char letter2 = expression[i+1];
+            char op = expression[i+2];
+
+            /* Show current step */
+            printf("| %4d |        %c%c%c          |      %c%c%c=%c      |  ",
+                   step, letter1, letter2, op, letter1, letter2, op, new_letter);
+
+            /* Build new expression */
+            int idx = 0;
+
+            /* Copy part before the sequence */
+            for (j = 0; j < i; j++) {
+                result[idx++] = expression[j];
+            }
+
+            /* Add new letter */
+            result[idx++] = new_letter;
+
+            /* Copy part after the sequence */
+            for (j = i + 3; j < len; j++) {
+                result[idx++] = expression[j];
+            }
+
+            result[idx] = '\0';
+
+            /* Show updated expression */
+            set_blue();
+            printf("%-40s", result);
+            reset_color();
+            printf(" |\n");
+
+            /* Update expression for next iteration */
+            strcpy(expression, result);
+
+            /* Decrement letter for next substitution */
+            new_letter--;
+
+            /* If uppercase letters run out, restart */
+            if (new_letter < 'A') {
+                new_letter = 'Z';
+            }
+            
+            step++;
         }
     }
-
-    // After processing all tokens, check the final state of the stack
-    printf("\n  Final Stack State:\n");
-    if (stack_size(&stack) == 0) {
-        printf("    Stack is empty. Expression is invalid (no final result).\n");
-        color_red();
-        printf("  Status: FAILED VERIFICATION - Stack is empty.\n");
-        color_normal();
-    } else if (stack_size(&stack) == 1 && !error) {
-        char *final_element;
-        stack_pop(&stack, (void**)&final_element);
-        printf("    Stack contains one element: '%c'. Expression is structurally valid.\n", *final_element);
-        color_green();
-        printf("  Status: SUCCESSFUL VERIFICATION - Expression reduced to a single element.\n");
-        color_normal();
-        free(final_element); // Free the last element
-    } else if (error) {
-        printf("    Verification stopped due to an error.\n");
-        color_red();
-        printf("  Status: FAILED VERIFICATION - Error during processing.\n");
-        color_normal();
-    } else { // stack_size(&stack) > 1 && !error
-        printf("    Stack contains %d elements: ", stack_size(&stack));
-        // Print remaining elements (optional, for debugging)
-        Stack temp_stack;
-        stack_init(&temp_stack, NULL);
-        while (stack_size(&stack) > 0) {
-            char *elem;
-            stack_pop(&stack, (void**)&elem);
-            printf("'%c' ", *elem);
-            stack_push(&temp_stack, elem);
-        }
-        printf("\n");
-        // Restore stack to clean up
-        while (stack_size(&temp_stack) > 0) {
-            char *elem;
-            stack_pop(&temp_stack, (void**)&elem);
-            stack_push(&stack, elem);
-        }
-        stack_destroy(&temp_stack);
-        color_red();
-        printf("  Status: FAILED VERIFICATION - Stack has more than one element.\n");
-        color_normal();
-    }
-
-    // Clean up the stack
-    stack_destroy(&stack);
 
     printf("+-------------------------------------------------------------------------------------------------+\n");
+
+    printf("\n");
+    set_yellow();
+    printf("  FINAL VERIFICATION RESULT:\n");
+    reset_color();
+    printf("  Completely reduced expression: ");
+    set_green();
+    printf("%s\n", expression);
+    reset_color();
+
+    if (strlen(expression) == 1 && isalpha(expression[0])) {
+        set_green();
+        printf("  The postfix expression is correct and has been reduced to a single variable!\n");
+        reset_color();
+    } else {
+        set_red();
+        printf("  WARNING! The expression could not be completely reduced.\n");
+        reset_color();
+    }
 }
 
 /*
@@ -672,21 +672,18 @@ int main(void) {
     char postfix[MAX_EXPR];
     char continue_char;
 
-    // init_colors(); // Quitamos la inicialización de Windows
-
     do {
-        clear_screen(); // Limpieza portable
-        // system("cls"); // Quitamos dependencia de windows
+        clear_screen();
 
         printf("\n\n");
-        color_green();
+        set_green();
         printf("+-------------------------------------------------------------------------------------------------+\n");
         printf("|                                                                                                 |\n");
         printf("|                       INFIX TO POSTFIX CALCULATOR                                               |\n");
         printf("|                         STEP-BY-STEP CONVERSION                                                 |\n");
         printf("|                                                                                                 |\n");
         printf("+-------------------------------------------------------------------------------------------------+\n");
-        color_normal();
+        reset_color();
 
         printf("\n");
         printf("+-------------------------------------------------------------------------------------------------+\n");
@@ -704,22 +701,22 @@ int main(void) {
         printf("| ALGORITHM FOR CONVERTING INFIX TO POSTFIX:                                                     |\n");
         printf("+-------------------------------------------------------------------------------------------------|\n");
         printf("|                                                                                                 |\n");
-        printf("|  • Read from LEFT TO RIGHT (first element first)                                                |\n");
-        printf("|  • The infix operation remains original                                                         |\n");
-        printf("|  • STACK COLUMN: Filled from RIGHT TO LEFT                                                      |\n");
-        printf("|  • OPERATION COLUMN: Filled from LEFT TO RIGHT                                                  |\n");
+        printf("|   Read from LEFT TO RIGHT (first element first)                                                |\n");
+        printf("|   The infix operation remains original                                                         |\n");
+        printf("|   STACK COLUMN: Filled from RIGHT TO LEFT                                                      |\n");
+        printf("|   OPERATION COLUMN: Filled from LEFT TO RIGHT                                                  |\n");
         printf("|                                                                                                 |\n");
         printf("|  POP IS DONE WHEN:                                                                              |\n");
-        printf("|    • Closing parentheses: )                                                                     |\n");
-        printf("|    • About to PUSH operation of LOWER OR EQUAL hierarchy                                        |\n");
-        printf("|    • No more elements to add (empty the STACK)                                                  |\n");
+        printf("|     Closing parentheses: )                                                                     |\n");
+        printf("|     About to PUSH operation of LOWER OR EQUAL hierarchy                                        |\n");
+        printf("|     No more elements to add (empty the STACK)                                                  |\n");
         printf("|                                                                                                 |\n");
         printf("|  It's NOT NECESSARY to invert the final result                                                  |\n");
         printf("|                                                                                                 |\n");
         printf("|  NOTE: New elements appear in ");
-        color_blue();
+        set_blue();
         printf("BLUE COLOR");
-        color_normal();
+        reset_color();
         printf("                                                          |\n");
         printf("|                                                                                                 |\n");
         printf("+-------------------------------------------------------------------------------------------------+\n");
@@ -728,15 +725,15 @@ int main(void) {
         printf("+-------------------------------------------------------------------------------------------------+\n");
         printf("| CONVERSION EXAMPLES:                                                                           |\n");
         printf("+-------------------------------------------------------------------------------------------------|\n");
-        printf("|  • a*b+(c^2-d)     ->    ab*c2d-+^                                                            |\n");
-        printf("|  • (a+b)*c         ->    ab+c*                                                                 |\n");
-        printf("|  • a+b*c           ->    abc*+                                                                 |\n");
+        printf("|   a*b+(c^2-d)     ->    ab*c2d-+^                                                            |\n");
+        printf("|   (a+b)*c         ->    ab+c*                                                                 |\n");
+        printf("|   a+b*c           ->    abc*+                                                                 |\n");
         printf("+-------------------------------------------------------------------------------------------------+\n");
 
         printf("\n");
-        color_yellow();
+        set_yellow();
         printf("  -> Enter the infix expression (letters only, no spaces): ");
-        color_normal();
+        reset_color();
         fgets(infix, MAX_EXPR, stdin);
 
         infix[strcspn(infix, "\n")] = '\0';
@@ -752,13 +749,13 @@ int main(void) {
         }
 
         if (!valid) {
-            color_red();
+            set_red();
             printf("\n  ERROR: Only letters (A-Z, a-z) and operators are allowed\n");
-            color_normal();
+            reset_color();
             printf("\n");
-            color_yellow();
+            set_yellow();
             printf("  Try with another expression? (y/n): ");
-            color_normal();
+            reset_color();
             continue_char = getchar();
             while (getchar() != '\n');
 
@@ -770,13 +767,13 @@ int main(void) {
 
         if (!validate_syntax(infix)) {
             printf("\n");
-            color_red();
+            set_red();
             printf("  The expression contains errors. Please correct the syntax.\n");
-            color_normal();
+            reset_color();
             printf("\n");
-            color_yellow();
+            set_yellow();
             printf("  Try with another expression? (y/n): ");
-            color_normal();
+            reset_color();
             continue_char = getchar();
             while (getchar() != '\n');
 
@@ -788,50 +785,50 @@ int main(void) {
 
         infix_to_postfix(infix, postfix);
 
-        /* VERIFICATION USING STACK EVALUATION (NO TRAVERSALS) */
-        verify_postfix_stack_eval(postfix); // <-- Llamada a la función de verificación por pila
+        /* AUTOMATIC VERIFICATION - Always executed */
+        verify_postfix(postfix);
 
         printf("\n");
-        color_green();
+        set_green();
         printf("+-------------------------------------------------------------------------------------------------+\n");
         printf("|                                FINAL SUMMARY                                                    |\n");
         printf("|-------------------------------------------------------------------------------------------------|\n");
-        color_normal();
+        reset_color();
         printf("|                                                                                                 |\n");
         printf("|   Infix Expression:   ");
-        color_yellow();
+        set_yellow();
         printf("%-60s", infix);
-        color_normal();
+        reset_color();
         printf(" |\n");
         printf("|                                                                                                 |\n");
         printf("|   Postfix Expression:  ");
-        color_blue();
+        set_blue();
         printf("%-60s", postfix);
-        color_normal();
+        reset_color();
         printf(" |\n");
         printf("|                                                                                                 |\n");
-        color_green();
+        set_green();
         printf("+-------------------------------------------------------------------------------------------------+\n");
-        color_normal();
+        reset_color();
 
         printf("\n");
-        color_green();
+        set_green();
         printf("  Conversion and verification completed successfully\n");
-        color_normal();
+        reset_color();
 
         printf("\n");
-        color_yellow();
+        set_yellow();
         printf("  Convert another expression? (y/n): ");
-        color_normal();
+        reset_color();
         continue_char = getchar();
         while (getchar() != '\n');
 
     } while (continue_char == 'y' || continue_char == 'Y');
 
     printf("\n");
-    color_green();
+    set_green();
     printf("  Thank you for using the calculator. Goodbye!\n");
-    color_normal();
+    reset_color();
     printf("\n");
 
     return 0;

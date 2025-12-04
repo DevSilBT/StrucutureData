@@ -1,12 +1,10 @@
-//INFIX.C - Portable Version
+// INFIX.C - Portable Version
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-// #include <windows.h> // Eliminado
 #include <math.h>
 #include <time.h>
-// #include <windows.h> // Eliminado
 #include "list.h"
 #include "stack.h"
 #include "queue.h"
@@ -15,126 +13,107 @@
 #define MAX_EXPR 256
 #define MAX_PATH 512
 
-// --- Definiciones de Secuencias VT100 ---
+// --- VT100 Sequence Definitions ---
 #define RESET_COLOR "\033[0m"
 #define COLOR_RED "\033[1;31m"
 #define COLOR_GREEN "\033[1;32m"
 #define COLOR_YELLOW "\033[1;33m"
 #define COLOR_BLUE "\033[1;34m"
-// Opcional: Puedes definir más si lo deseas
-// #define COLOR_MAGENTA "\033[1;35m"
-// #define COLOR_CYAN "\033[1;36m"
-// #define COLOR_WHITE "\033[1;37m"
 
-// --- Función para limpiar pantalla portable ---
+// --- Portable screen clear function ---
 void clear_screen() {
     printf("\033[2J\033[H");
-    fflush(stdout); // Asegura que la limpieza se aplique inmediatamente
+    fflush(stdout);
 }
 
 /*
-    Inicializar sistema de colores
-    No longer needed with VT100
+    Restore original color
 */
-/*
-void init_colores() {
-    hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-    GetConsoleScreenBufferInfo(hConsole, &consoleInfo);
-    originalAttributes = consoleInfo.wAttributes;
-}
-*/
-
-/*
-    Restaurar color original
-*/
-void color_normal() {
+void reset_color() {
     printf(RESET_COLOR);
 }
 
 /*
-    Establecer color azul
+    Set blue color
 */
-void color_azul() {
+void set_blue() {
     printf(COLOR_BLUE);
 }
 
 /*
-    Establecer color verde
+    Set green color
 */
-void color_verde() {
+void set_green() {
     printf(COLOR_GREEN);
 }
 
-void color_amarillo() {
+void set_yellow() {
     printf(COLOR_YELLOW);
 }
 
 /*
-    Establecer color rojo
+    Set red color
 */
-void color_rojo() {
+void set_red() {
     printf(COLOR_RED);
 }
 
 // Structure for tokens
 typedef struct {
-    char tipo;  // 'N' = number, 'O' = operator, 'P' = parenthesis
-    double valor;
-    char operador;
+    char type;      // 'N' = number, 'O' = operator, 'P' = parenthesis
+    double value;
+    char operator;
 } Token;
 
 // Structure for evaluation steps
 typedef struct {
-    double operando1;
-    double operando2;
-    char operador;
-    double resultado;
-} Paso;
+    double operand1;
+    double operand2;
+    char operator;
+    double result;
+} Step;
 
 // Prototypes
-int validarSintaxis(const char *expr);
-void tokenizar(const char *expr, DList *tokens);
-double evaluarExpresion(DList *tokens, Queue *pasos);
-int precedencia(char op);
-int esOperador(char c);
-double aplicarOperacion(char op, double a, double b);
-void mostrarPasos(Queue *pasos);
-void liberarToken(void *data);
-void liberarPaso(void *data);
+int validate_syntax(const char *expr);
+void tokenize(const char *expr, DList *tokens);
+double evaluate_expression(DList *tokens, Queue *steps);
+int precedence(char op);
+int is_operator(char c);
+double apply_operation(char op, double a, double b);
+void show_steps(Queue *steps);
+void free_token(void *data);
+void free_step(void *data);
 
 // NEW FUNCTIONS FOR SAVING FILE
-void guardarOperacionesEnArchivo(Queue *pasos, const char *expresion, double resultado, const char *nombreArchivo);
-void mostrarPasosEnArchivo(Queue *pasos, FILE *archivo);
-int obtenerRutaArchivo(char *ruta);
+void save_operations_to_file(Queue *steps, const char *expression, double result, const char *filename);
+void show_steps_in_file(Queue *steps, FILE *file);
+int get_file_path(char *path);
 
-// Funcin para mostrar tabla con formato
-void mostrarTablaEvaluacion(DList *tokens);
+// Function to show table with format
+void show_evaluation_table(DList *tokens);
 
 // Main function
 int main() {
-    char expresion[MAX_EXPR];
-    char rutaArchivo[MAX_PATH];
+    char expression[MAX_EXPR];
+    char file_path[MAX_PATH];
     DList tokens;
-    Queue pasos;
-    double resultado;
+    Queue steps;
+    double result;
     
-    // init_colores(); // Quitamos la inicialización de Windows
-    
-    clear_screen(); // Limpieza portable
-    // system("cls"); // Quitamos dependencia de windows
+    clear_screen();
     
     printf("\n\n");
-    color_verde();
+    set_green();
     printf("+===============================================================================================+\n");
     printf("|                                                                                               |\n");
     printf("|                       INFIX EXPRESSION CALCULATOR                                             |\n");
     printf("|                         EVALUATION STEP BY STEP                                               |\n");
     printf("|                                                                                               |\n");
     printf("+===============================================================================================+\n");
-    color_normal();
+    reset_color();
     
     printf("\n");
-    color_verde();
+    set_green();
     printf("+===============================================================================================+\n");
     printf("| OPERATOR HIERARCHY (from highest to lowest precedence):                                       |\n");
     printf("+===============================================================================================|\n");
@@ -143,10 +122,10 @@ int main() {
     printf("|  3. * /         Multiplication and Division                                                   |\n");
     printf("|  4. + -         Addition and Subtraction                                                      |\n");
     printf("+===============================================================================================+\n");
-    color_normal();
+    reset_color();
     
     printf("\n");
-    color_verde();
+    set_green();
     printf("+===============================================================================================+\n");
     printf("| EVALUATION ALGORITHM:                                                                         |\n");
     printf("+===============================================================================================|\n");
@@ -157,10 +136,10 @@ int main() {
     printf("|   Parentheses change the evaluation order                                                    |\n");
     printf("|                                                                                               |\n");
     printf("+===============================================================================================+\n");
-    color_normal();
+    reset_color();
     
     printf("\n");
-    color_verde();
+    set_green();
     printf("+===============================================================================================+\n");
     printf("| EXAMPLES:                                                                                     |\n");
     printf("+===============================================================================================|\n");
@@ -168,146 +147,146 @@ int main() {
     printf("|   (3+4)*5         ->    35                                                                   |\n");
     printf("|   2^3+4*5         ->    28                                                                   |\n");
     printf("+===============================================================================================+\n");
-    color_normal();
+    reset_color();
 
     while(1) {
         printf("\n");
-        color_amarillo();
+        set_yellow();
         printf("  -> Enter the expression (or 'exit' to finish): ");
-        color_azul();
+        set_blue();
         printf("");
-        color_normal();
-        fgets(expresion, MAX_EXPR, stdin);
+        reset_color();
+        fgets(expression, MAX_EXPR, stdin);
 
         // Remove newline
-        expresion[strcspn(expresion, "\n")] = 0;
+        expression[strcspn(expression, "\n")] = 0;
 
         // Check for exit
-        if(strcmp(expresion, "exit") == 0) {
+        if(strcmp(expression, "exit") == 0) {
             printf("\n");
-            color_verde();
+            set_green();
             printf("  Thank you for using the calculator! Goodbye!\n");
-            color_normal();
+            reset_color();
             printf("\n");
             break;
         }
 
         // Validate syntax
         printf("\n");
-        color_amarillo();
+        set_yellow();
         printf("[1] Validating syntax...\n");
-        color_normal();
-        if(!validarSintaxis(expresion)) {
-            color_rojo();
+        reset_color();
+        if(!validate_syntax(expression)) {
+            set_red();
             printf("    ERROR: The expression has syntax errors.\n\n");
-            color_normal();
+            reset_color();
             
-            color_amarillo();
+            set_yellow();
             printf("  Do you want to try another expression? (y/n): ");
-            color_normal();
-            char respuesta;
-            scanf(" %c", &respuesta);
+            reset_color();
+            char answer;
+            scanf(" %c", &answer);
             getchar();
             
-            if(respuesta != 'y' && respuesta != 'Y') {
+            if(answer != 'y' && answer != 'Y') {
                 break;
             }
             continue;
         }
         
-        color_verde();
+        set_green();
         printf("    Syntax correct!\n");
-        color_normal();
+        reset_color();
 
         // Tokenize
         printf("\n");
-        color_amarillo();
+        set_yellow();
         printf("[2] Tokenizing expression...\n");
-        color_normal();
-        dlist_init(&tokens, liberarToken);
-        tokenizar(expresion, &tokens);
-        color_azul();
+        reset_color();
+        dlist_init(&tokens, free_token);
+        tokenize(expression, &tokens);
+        set_blue();
         printf("    Tokens processed: %d\n", dlist_size(&tokens));
-        color_normal();
+        reset_color();
 
         // Evaluate expression step by step
         printf("\n");
-        color_amarillo();
+        set_yellow();
         printf("[3] Evaluating expression with operation hierarchy...\n");
-        color_normal();
+        reset_color();
         
-        color_verde();
+        set_green();
         printf("+-------------------------------------------------------------------------------------------------+\n");
-        color_normal();
+        reset_color();
 
-        queue_init(&pasos, liberarPaso);
-        resultado = evaluarExpresion(&tokens, &pasos);
+        queue_init(&steps, free_step);
+        result = evaluate_expression(&tokens, &steps);
 
         printf("\n");
-        color_amarillo();
+        set_yellow();
         printf("[4] Evaluation steps (binary operations):\n");
-        color_normal();
+        reset_color();
         
-        color_verde();
+        set_green();
         printf("+-------------------------------------------------------------------------------------------------+\n");
-        color_normal();
+        reset_color();
         
-        mostrarPasos(&pasos);
+        show_steps(&steps);
         
-        color_verde();
+        set_green();
         printf("+-------------------------------------------------------------------------------------------------+\n");
-        color_normal();
+        reset_color();
         
         printf("\n");
-        color_verde();
+        set_green();
         printf("[FINAL RESULT] = ");
-        color_azul();
-        printf("%.4f\n", resultado);
-        color_normal();
+        set_blue();
+        printf("%.4f\n", result);
+        reset_color();
 
         // NEW FEATURE: SAVE TO FILE
         printf("\n");
-        color_amarillo();
+        set_yellow();
         printf("==============================================\n");
         printf("Do you want to save the operations to a file? (y/n): ");
-        color_normal();
-        char respuesta;
-        scanf(" %c", &respuesta);
+        reset_color();
+        char answer;
+        scanf(" %c", &answer);
         getchar(); // Clear the buffer
 
-        if(respuesta == 'y' || respuesta == 'Y') {
-            if(obtenerRutaArchivo(rutaArchivo)) {
-                guardarOperacionesEnArchivo(&pasos, expresion, resultado, rutaArchivo);
-                color_verde();
-                printf("Operations saved to: %s\n", rutaArchivo);
-                color_normal();
+        if(answer == 'y' || answer == 'Y') {
+            if(get_file_path(file_path)) {
+                save_operations_to_file(&steps, expression, result, file_path);
+                set_green();
+                printf("Operations saved to: %s\n", file_path);
+                reset_color();
             }
         }
         
-        color_amarillo();
+        set_yellow();
         printf("==============================================\n");
-        color_normal();
+        reset_color();
 
         // Free memory
         dlist_destroy(&tokens);
-        queue_destroy(&pasos);
+        queue_destroy(&steps);
     }
 
     return 0;
 }
 
 // Validate expression syntax
-int validarSintaxis(const char *expr) {
+int validate_syntax(const char *expr) {
     int i, len = strlen(expr);
-    int parentesis = 0;
-    int esperaOperando = 1;
-    char anterior = '\0';
-    int enNumero = 0;
+    int parenthesis = 0;
+    int expect_operand = 1;
+    char previous = '\0';
+    int in_number = 0;
 
     if(len == 0) {
-        color_rojo();
+        set_red();
         printf("    Error: Empty expression\n");
-        color_normal();
+        reset_color();
         return 0;
     }
 
@@ -315,85 +294,85 @@ int validarSintaxis(const char *expr) {
         char c = expr[i];
 
         if(isspace(c)) {
-            enNumero = 0;
+            in_number = 0;
             continue;
         }
 
         if(c == '(') {
-            if(!esperaOperando && !esOperador(anterior) && anterior != '(' && anterior != '\0') {
-                color_rojo();
+            if(!expect_operand && !is_operator(previous) && previous != '(' && previous != '\0') {
+                set_red();
                 printf("    Error: Unexpected opening parenthesis at position %d\n", i);
-                color_normal();
+                reset_color();
                 return 0;
             }
-            parentesis++;
-            esperaOperando = 1;
-            enNumero = 0;
-            anterior = c;
+            parenthesis++;
+            expect_operand = 1;
+            in_number = 0;
+            previous = c;
         }
         else if(c == ')') {
-            if(esperaOperando) {
-                color_rojo();
+            if(expect_operand) {
+                set_red();
                 printf("    Error: Closing parenthesis after operator at position %d\n", i);
-                color_normal();
+                reset_color();
                 return 0;
             }
-            parentesis--;
-            if(parentesis < 0) {
-                color_rojo();
+            parenthesis--;
+            if(parenthesis < 0) {
+                set_red();
                 printf("    Error: Closing parenthesis without opening at position %d\n", i);
-                color_normal();
+                reset_color();
                 return 0;
             }
-            esperaOperando = 0;
-            enNumero = 0;
-            anterior = c;
+            expect_operand = 0;
+            in_number = 0;
+            previous = c;
         }
         else if(isdigit(c) || c == '.') {
-            if(!esperaOperando && !enNumero) {
-                color_rojo();
+            if(!expect_operand && !in_number) {
+                set_red();
                 printf("    Error: Unexpected number at position %d\n", i);
-                color_normal();
+                reset_color();
                 return 0;
             }
-            esperaOperando = 0;
-            enNumero = 1;
+            expect_operand = 0;
+            in_number = 1;
         }
-        else if(esOperador(c)) {
-            if((c == '-' || c == '+') && esperaOperando) {
-                esperaOperando = 1;
+        else if(is_operator(c)) {
+            if((c == '-' || c == '+') && expect_operand) {
+                expect_operand = 1;
             }
-            else if(esperaOperando) {
-                color_rojo();
+            else if(expect_operand) {
+                set_red();
                 printf("    Error: Unexpected operator '%c' at position %d\n", c, i);
-                color_normal();
+                reset_color();
                 return 0;
             }
             else {
-                esperaOperando = 1;
+                expect_operand = 1;
             }
-            enNumero = 0;
-            anterior = c;
+            in_number = 0;
+            previous = c;
         }
         else {
-            color_rojo();
+            set_red();
             printf("    Error: Invalid character '%c' at position %d\n", c, i);
-            color_normal();
+            reset_color();
             return 0;
         }
     }
 
-    if(parentesis != 0) {
-        color_rojo();
+    if(parenthesis != 0) {
+        set_red();
         printf("    Error: Unclosed parentheses\n");
-        color_normal();
+        reset_color();
         return 0;
     }
 
-    if(esperaOperando) {
-        color_rojo();
+    if(expect_operand) {
+        set_red();
         printf("    Error: Incomplete expression\n");
-        color_normal();
+        reset_color();
         return 0;
     }
 
@@ -401,7 +380,7 @@ int validarSintaxis(const char *expr) {
 }
 
 // Tokenize the expression
-void tokenizar(const char *expr, DList *tokens) {
+void tokenize(const char *expr, DList *tokens) {
     int i = 0, len = strlen(expr);
 
     while(i < len) {
@@ -413,16 +392,16 @@ void tokenizar(const char *expr, DList *tokens) {
         Token *token = (Token*)malloc(sizeof(Token));
 
         if(isdigit(expr[i]) || expr[i] == '.') {
-            char numStr[50];
+            char num_str[50];
             int j = 0;
 
             while(i < len && (isdigit(expr[i]) || expr[i] == '.')) {
-                numStr[j++] = expr[i++];
+                num_str[j++] = expr[i++];
             }
-            numStr[j] = '\0';
+            num_str[j] = '\0';
 
-            token->tipo = 'N';
-            token->valor = atof(numStr);
+            token->type = 'N';
+            token->value = atof(num_str);
 
             if(dlist_size(tokens) == 0) {
                 dlist_ins_next(tokens, NULL, token);
@@ -431,8 +410,8 @@ void tokenizar(const char *expr, DList *tokens) {
             }
         }
         else {
-            token->tipo = (expr[i] == '(' || expr[i] == ')') ? 'P' : 'O';
-            token->operador = expr[i];
+            token->type = (expr[i] == '(' || expr[i] == ')') ? 'P' : 'O';
+            token->operator = expr[i];
 
             if(dlist_size(tokens) == 0) {
                 dlist_ins_next(tokens, NULL, token);
@@ -445,80 +424,80 @@ void tokenizar(const char *expr, DList *tokens) {
 }
 
 // Evaluate expression using two stacks (numbers and operators)
-double evaluarExpresion(DList *tokens, Queue *pasos) {
-    Stack pilaNumeros, pilaOperadores;
-    DListNode *actual;
+double evaluate_expression(DList *tokens, Queue *steps) {
+    Stack number_stack, operator_stack;
+    DListNode *current;
 
-    stack_init(&pilaNumeros, NULL);
-    stack_init(&pilaOperadores, NULL);
+    stack_init(&number_stack, NULL);
+    stack_init(&operator_stack, NULL);
 
-    actual = dlist_head(tokens);
+    current = dlist_head(tokens);
 
-    while(actual != NULL) {
-        Token *token = (Token*)dlist_data(actual);
+    while(current != NULL) {
+        Token *token = (Token*)dlist_data(current);
 
-        if(token->tipo == 'N') {
+        if(token->type == 'N') {
             // Number: push directly
             double *num = (double*)malloc(sizeof(double));
-            *num = token->valor;
-            stack_push(&pilaNumeros, num);
+            *num = token->value;
+            stack_push(&number_stack, num);
         }
-        else if(token->tipo == 'O') {
+        else if(token->type == 'O') {
             // Operator: process according to precedence
-            while(stack_size(&pilaOperadores) > 0) {
-                char *topOp = (char*)stack_peek(&pilaOperadores);
+            while(stack_size(&operator_stack) > 0) {
+                char *top_op = (char*)stack_peek(&operator_stack);
 
-                if(*topOp == '(') break;
+                if(*top_op == '(') break;
 
                 // Check precedence
-                if(precedencia(token->operador) > precedencia(*topOp)) break;
+                if(precedence(token->operator) > precedence(*top_op)) break;
 
                 // Right associativity for ^
-                if(token->operador == '^' && *topOp == '^') break;
+                if(token->operator == '^' && *top_op == '^') break;
 
                 // Perform operation
                 char *op;
-                stack_pop(&pilaOperadores, (void**)&op);
+                stack_pop(&operator_stack, (void**)&op);
 
                 double *num2, *num1;
-                stack_pop(&pilaNumeros, (void**)&num2);
-                stack_pop(&pilaNumeros, (void**)&num1);
+                stack_pop(&number_stack, (void**)&num2);
+                stack_pop(&number_stack, (void**)&num1);
 
-                double resultado = aplicarOperacion(*op, *num1, *num2);
+                double result = apply_operation(*op, *num1, *num2);
 
                 // Save step
-                Paso *paso = (Paso*)malloc(sizeof(Paso));
-                paso->operando1 = *num1;
-                paso->operando2 = *num2;
-                paso->operador = *op;
-                paso->resultado = resultado;
-                queue_enqueue(pasos, paso);
+                Step *step = (Step*)malloc(sizeof(Step));
+                step->operand1 = *num1;
+                step->operand2 = *num2;
+                step->operator = *op;
+                step->result = result;
+                queue_enqueue(steps, step);
 
                 // Push result
                 double *res = (double*)malloc(sizeof(double));
-                *res = resultado;
-                stack_push(&pilaNumeros, res);
+                *res = result;
+                stack_push(&number_stack, res);
 
                 free(op);
                 free(num1);
                 free(num2);
             }
 
-            char *nuevoOp = (char*)malloc(sizeof(char));
-            *nuevoOp = token->operador;
-            stack_push(&pilaOperadores, nuevoOp);
+            char *new_op = (char*)malloc(sizeof(char));
+            *new_op = token->operator;
+            stack_push(&operator_stack, new_op);
         }
-        else if(token->tipo == 'P') {
-            if(token->operador == '(') {
+        else if(token->type == 'P') {
+            if(token->operator == '(') {
                 char *par = (char*)malloc(sizeof(char));
                 *par = '(';
-                stack_push(&pilaOperadores, par);
+                stack_push(&operator_stack, par);
             }
-            else if(token->operador == ')') {
+            else if(token->operator == ')') {
                 // Process until '(' is found
-                while(stack_size(&pilaOperadores) > 0) {
+                while(stack_size(&operator_stack) > 0) {
                     char *op;
-                    stack_pop(&pilaOperadores, (void**)&op);
+                    stack_pop(&operator_stack, (void**)&op);
 
                     if(*op == '(') {
                         free(op);
@@ -526,22 +505,22 @@ double evaluarExpresion(DList *tokens, Queue *pasos) {
                     }
 
                     double *num2, *num1;
-                    stack_pop(&pilaNumeros, (void**)&num2);
-                    stack_pop(&pilaNumeros, (void**)&num1);
+                    stack_pop(&number_stack, (void**)&num2);
+                    stack_pop(&number_stack, (void**)&num1);
 
-                    double resultado = aplicarOperacion(*op, *num1, *num2);
+                    double result = apply_operation(*op, *num1, *num2);
 
                     // Save step
-                    Paso *paso = (Paso*)malloc(sizeof(Paso));
-                    paso->operando1 = *num1;
-                    paso->operando2 = *num2;
-                    paso->operador = *op;
-                    paso->resultado = resultado;
-                    queue_enqueue(pasos, paso);
+                    Step *step = (Step*)malloc(sizeof(Step));
+                    step->operand1 = *num1;
+                    step->operand2 = *num2;
+                    step->operator = *op;
+                    step->result = result;
+                    queue_enqueue(steps, step);
 
                     double *res = (double*)malloc(sizeof(double));
-                    *res = resultado;
-                    stack_push(&pilaNumeros, res);
+                    *res = result;
+                    stack_push(&number_stack, res);
 
                     free(op);
                     free(num1);
@@ -550,31 +529,31 @@ double evaluarExpresion(DList *tokens, Queue *pasos) {
             }
         }
 
-        actual = dlist_next(actual);
+        current = dlist_next(current);
     }
 
     // Process remaining operators
-    while(stack_size(&pilaOperadores) > 0) {
+    while(stack_size(&operator_stack) > 0) {
         char *op;
-        stack_pop(&pilaOperadores, (void**)&op);
+        stack_pop(&operator_stack, (void**)&op);
 
         double *num2, *num1;
-        stack_pop(&pilaNumeros, (void**)&num2);
-        stack_pop(&pilaNumeros, (void**)&num1);
+        stack_pop(&number_stack, (void**)&num2);
+        stack_pop(&number_stack, (void**)&num1);
 
-        double resultado = aplicarOperacion(*op, *num1, *num2);
+        double result = apply_operation(*op, *num1, *num2);
 
         // Save step
-        Paso *paso = (Paso*)malloc(sizeof(Paso));
-        paso->operando1 = *num1;
-        paso->operando2 = *num2;
-        paso->operador = *op;
-        paso->resultado = resultado;
-        queue_enqueue(pasos, paso);
+        Step *step = (Step*)malloc(sizeof(Step));
+        step->operand1 = *num1;
+        step->operand2 = *num2;
+        step->operator = *op;
+        step->result = result;
+        queue_enqueue(steps, step);
 
         double *res = (double*)malloc(sizeof(double));
-        *res = resultado;
-        stack_push(&pilaNumeros, res);
+        *res = result;
+        stack_push(&number_stack, res);
 
         free(op);
         free(num1);
@@ -582,28 +561,28 @@ double evaluarExpresion(DList *tokens, Queue *pasos) {
     }
 
     // Get final result
-    double *resultadoFinal;
-    stack_pop(&pilaNumeros, (void**)&resultadoFinal);
-    double valor = *resultadoFinal;
-    free(resultadoFinal);
+    double *final_result;
+    stack_pop(&number_stack, (void**)&final_result);
+    double value = *final_result;
+    free(final_result);
 
-    stack_destroy(&pilaNumeros);
-    stack_destroy(&pilaOperadores);
+    stack_destroy(&number_stack);
+    stack_destroy(&operator_stack);
 
-    return valor;
+    return value;
 }
 
 // Apply operation
-double aplicarOperacion(char op, double a, double b) {
+double apply_operation(char op, double a, double b) {
     switch(op) {
         case '+': return a + b;
         case '-': return a - b;
         case '*': return a * b;
         case '/':
             if(b == 0) {
-                color_rojo();
+                set_red();
                 printf("\nERROR: Division by zero!\n");
-                color_normal();
+                reset_color();
                 exit(1);
             }
             return a / b;
@@ -613,50 +592,50 @@ double aplicarOperacion(char op, double a, double b) {
 }
 
 // Show evaluation steps
-void mostrarPasos(Queue *pasos) {
-    ListNode *actual = list_head(pasos);
-    int numPaso = 1;
+void show_steps(Queue *steps) {
+    ListNode *current = list_head(steps);
+    int step_number = 1;
 
-    // Encabezado de la tabla
-    color_verde();
+    // Table header
+    set_green();
     printf("| %-6s | %-15s | %-10s | %-15s | %-15s |\n", 
            "Step", "Operand 1", "Operator", "Operand 2", "Result");
-    color_normal();
-    color_verde();
+    reset_color();
+    set_green();
     printf("+--------+-----------------+------------+-----------------+-----------------+\n");
-    color_normal();
+    reset_color();
 
-    while(actual != NULL) {
-        Paso *paso = (Paso*)list_data(actual);
-        if (paso != NULL) {
+    while(current != NULL) {
+        Step *step = (Step*)list_data(current);
+        if (step != NULL) {
             printf("| ");
-            color_azul();
-            printf("%-6d", numPaso++);
-            color_normal();
+            set_blue();
+            printf("%-6d", step_number++);
+            reset_color();
             printf(" | ");
-            color_amarillo();
-            printf("%-15.4f", paso->operando1);
-            color_normal();
+            set_yellow();
+            printf("%-15.4f", step->operand1);
+            reset_color();
             printf(" | ");
-            color_rojo();
-            printf("%-10c", paso->operador);
-            color_normal();
+            set_red();
+            printf("%-10c", step->operator);
+            reset_color();
             printf(" | ");
-            color_amarillo();
-            printf("%-15.4f", paso->operando2);
-            color_normal();
+            set_yellow();
+            printf("%-15.4f", step->operand2);
+            reset_color();
             printf(" | ");
-            color_verde();
-            printf("%-15.4f", paso->resultado);
-            color_normal();
+            set_green();
+            printf("%-15.4f", step->result);
+            reset_color();
             printf(" |\n");
         }
-        actual = list_next(actual);
+        current = list_next(current);
     }
 }
 
 // Get operator precedence
-int precedencia(char op) {
+int precedence(char op) {
     switch(op) {
         case '+':
         case '-': return 1;
@@ -668,28 +647,28 @@ int precedencia(char op) {
 }
 
 // Check if it's an operator
-int esOperador(char c) {
+int is_operator(char c) {
     return (c == '+' || c == '-' || c == '*' || c == '/' || c == '^');
 }
 
 // Free token
-void liberarToken(void *data) {
+void free_token(void *data) {
     free(data);
 }
 
 // Free step
-void liberarPaso(void *data) {
+void free_step(void *data) {
     free(data);
 }
 
 // NEW FUNCTIONS FOR FILE HANDLING
 
-void guardarOperacionesEnArchivo(Queue *pasos, const char *expresion, double resultado, const char *nombreArchivo) {
-    FILE *archivo = fopen(nombreArchivo, "a");
-    if(archivo == NULL) {
-        color_rojo();
-        printf("Error: Could not create/open the file '%s'\n", nombreArchivo);
-        color_normal();
+void save_operations_to_file(Queue *steps, const char *expression, double result, const char *filename) {
+    FILE *file = fopen(filename, "a");
+    if(file == NULL) {
+        set_red();
+        printf("Error: Could not create/open the file '%s'\n", filename);
+        reset_color();
         return;
     }
 
@@ -699,68 +678,68 @@ void guardarOperacionesEnArchivo(Queue *pasos, const char *expresion, double res
     char buffer[80];
     strftime(buffer, 80, "%Y-%m-%d %H:%M:%S", tm_info);
 
-    fprintf(archivo, "==============================================\n");
-    fprintf(archivo, "SAVED OPERATION: %s\n", buffer);
-    fprintf(archivo, "Expression: %s\n", expresion);
-    fprintf(archivo, "----------------------------------------------\n");
-    fprintf(archivo, "Evaluation steps:\n");
+    fprintf(file, "==============================================\n");
+    fprintf(file, "SAVED OPERATION: %s\n", buffer);
+    fprintf(file, "Expression: %s\n", expression);
+    fprintf(file, "----------------------------------------------\n");
+    fprintf(file, "Evaluation steps:\n");
 
     // Write steps
-    mostrarPasosEnArchivo(pasos, archivo);
+    show_steps_in_file(steps, file);
 
-    fprintf(archivo, "----------------------------------------------\n");
-    fprintf(archivo, "FINAL RESULT: %.4f\n", resultado);
-    fprintf(archivo, "==============================================\n\n");
+    fprintf(file, "----------------------------------------------\n");
+    fprintf(file, "FINAL RESULT: %.4f\n", result);
+    fprintf(file, "==============================================\n\n");
 
-    fclose(archivo);
+    fclose(file);
 }
 
-void mostrarPasosEnArchivo(Queue *pasos, FILE *archivo) {
-    if (pasos == NULL || archivo == NULL) return;
+void show_steps_in_file(Queue *steps, FILE *file) {
+    if (steps == NULL || file == NULL) return;
 
-    ListNode *actual = list_head(pasos);
-    int numPaso = 1;
+    ListNode *current = list_head(steps);
+    int step_number = 1;
 
-    while(actual != NULL) {
-        Paso *paso = (Paso*)list_data(actual);
-        if (paso != NULL) {
-            fprintf(archivo, "Step %d: %.4f %c %.4f = %.4f\n",
-                   numPaso++,
-                   paso->operando1,
-                   paso->operador,
-                   paso->operando2,
-                   paso->resultado);
+    while(current != NULL) {
+        Step *step = (Step*)list_data(current);
+        if (step != NULL) {
+            fprintf(file, "Step %d: %.4f %c %.4f = %.4f\n",
+                   step_number++,
+                   step->operand1,
+                   step->operator,
+                   step->operand2,
+                   step->result);
         }
-        actual = list_next(actual);
+        current = list_next(current);
     }
 }
 
-int obtenerRutaArchivo(char *ruta) {
-    color_amarillo();
+int get_file_path(char *path) {
+    set_yellow();
     printf("Enter the file path and name (e.g., operations.txt or C:/my_operations.txt):\n> ");
-    color_normal();
+    reset_color();
 
-    if(fgets(ruta, MAX_PATH, stdin) == NULL) {
-        color_rojo();
+    if(fgets(path, MAX_PATH, stdin) == NULL) {
+        set_red();
         printf("Error reading the path.\n");
-        color_normal();
+        reset_color();
         return 0;
     }
 
     // Remove newline
-    ruta[strcspn(ruta, "\n")] = 0;
+    path[strcspn(path, "\n")] = 0;
 
     // Verify the path is not empty
-    if(strlen(ruta) == 0) {
-        color_rojo();
+    if(strlen(path) == 0) {
+        set_red();
         printf("Error: The path cannot be empty.\n");
-        color_normal();
+        reset_color();
         return 0;
     }
 
     // Verify it ends with .txt, if not, add it
-    if(strlen(ruta) < 4 || strcmp(ruta + strlen(ruta) - 4, ".txt") != 0) {
-        strcat(ruta, ".txt");
+    if(strlen(path) < 4 || strcmp(path + strlen(path) - 4, ".txt") != 0) {
+        strcat(path, ".txt");
     }
 
     return 1;

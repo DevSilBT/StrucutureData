@@ -1,4 +1,4 @@
-//PRE-NUM Portable Version with Prefix Verification (Letters, English)
+//PRE-NUM Portable Version
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -6,8 +6,8 @@
 // #include <windows.h> // Eliminado
 #include <math.h>  // Added for mathematical operations
 #include "stack.h"
-#include "dlist.h" 
-#include "list.h" 
+#include "dlist.h"
+#include "list.h"
 #define MAX_EXPR 256
 
 // --- Definiciones de Secuencias VT100 ---
@@ -26,6 +26,18 @@ void clear_screen() {
     printf("\033[2J\033[H");
     fflush(stdout); // Asegura que la limpieza se aplique inmediatamente
 }
+
+/*
+    Initialize color system
+    No longer needed with VT100
+*/
+/*
+void init_colors() {
+    hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    GetConsoleScreenBufferInfo(hConsole, &consoleInfo);
+    originalAttributes = consoleInfo.wAttributes;
+}
+*/
 
 /*
     Restore original color
@@ -80,7 +92,7 @@ int is_operator(char c) {
 /*
     NEW FUNCTION: Validate infix expression syntax
     Returns 1 if expression is valid, 0 if it has errors
-    MODIFIED: Supports multi-digit numbers and letters
+    MODIFIED: Supports multi-digit numbers
 */
 int validate_syntax(const char *infix) {
     int i;
@@ -401,7 +413,7 @@ void infix_to_prefix(const char *infix, char *prefix) {
     color_green();
     printf("RIGHT -> LEFT");
     color_normal();
-    printf(" (last element first)\n");
+    printf(" (last element first)\n\n");
 
     printf("+-----------------------------------------------------------------------------------------------------------------+\n");
     printf("|       |                          |                         |                             |\n");
@@ -667,19 +679,59 @@ void infix_to_prefix(const char *infix, char *prefix) {
 }
 
 /*
-    Function to evaluate prefix expression through traversals
-    Identifies binary operations of the form: operator letter letter
-    For example: +ab is evaluated and replaced with a new variable
-    MODIFIED: Uses VT100 colors and improved consistency. Works with letters.
+    Helper function to extract a complete number from a position
+    Returns the length of the found number
 */
-void evaluate_prefix_letters(const char *prefix) {
+int extract_number(const char *expression, int start, char *number) {
+    int j = 0;
+    int i = start;
+    /* Skip initial spaces */
+    while (expression[i] == ' ') {
+        i++;
+    }
+    /* Extract digits */
+    while (expression[i] != '\0' && isdigit(expression[i])) {
+        number[j++] = expression[i++];
+    }
+    number[j] = '\0';
+    return i - start;  /* Returns how many characters were advanced (includes spaces) */
+}
+
+/*
+    Helper function to calculate powers (exponentiation)
+    Calculates base^exponent
+*/
+int power(int base, int exponent) {
+    int result = 1;
+    for (int i = 0; i < exponent; i++) {
+        result *= base;
+    }
+    return result;
+}
+
+/*
+    Function to evaluate prefix expression through traversals
+    Identifies binary operations of the form: operator number(s) number(s)
+    SEARCH FROM LEFT TO RIGHT to find the first complete operation
+    For example: in "+ / 18 ^ 3 2 ...", first finds "^ 3 2"
+    Supports multi-digit numbers
+    MODIFIED: Performs mathematical operations correctly
+*/
+void evaluate_prefix(const char *prefix) {
     char expression[MAX_EXPR];
     char result[MAX_EXPR];
     int i, j, k;
     int step = 1;
-    char new_var = 'Z';  /* Variable to be used to replace operations (Z, Y, X, ...) */
+    int new_num = 99;  /* Number that will be used to replace operations (99, 98, 97...) */
     int changes = 1;
     int length;
+    char num1[MAX_EXPR], num2[MAX_EXPR];
+    int advance_num1, advance_num2;
+    int pos_after_num1, pos_after_num2;
+    char operation_str[MAX_EXPR];
+    char new_num_str[20];
+    int operation_found;
+    int pos_num1, pos_num2;
 
     strcpy(expression, prefix);
 
@@ -700,10 +752,10 @@ void evaluate_prefix_letters(const char *prefix) {
 
     printf("  Method: Search for binary operations of the form: ");
     color_green();
-    printf("operator letter letter");
+    printf("operator number(s) number(s)");
     color_normal();
     printf("\n");
-    printf("  Note: Operands are letters (a-z, A-Z)\n");
+    printf("  Note: Multi-digit numbers are recognized (ex: 123, 45, 7)\n");
     printf("  Search: ");
     color_green();
     printf("LEFT -> RIGHT");
@@ -718,67 +770,141 @@ void evaluate_prefix_letters(const char *prefix) {
     while (changes) {
         changes = 0;
         length = strlen(expression);
+        operation_found = 0;
 
         /* SEARCH FROM LEFT TO RIGHT for the first complete operation */
-        for (i = 0; i < length - 2; i++) { // Buscamos patrones de 3 caracteres
-            /* If we find an operator followed by two letters */
-            if (is_operator(expression[i]) &&
-                isalpha(expression[i+1]) &&
-                isalpha(expression[i+2])) {
+        for (i = 0; i < length && !operation_found; i++) {
+            /* Skip spaces */
+            if (expression[i] == ' ') continue;
 
-                /* Print the found operation */
-                printf("|  %3d  |   ", step);
-                color_blue();
-                printf("%c%c%c", expression[i], expression[i+1], expression[i+2]);
-                color_normal();
-                printf(" = ");
-                color_green();
-                printf("%c", new_var);
-                color_normal();
-
-                /* Spaces for alignment */
-                int op_spaces = 30 - 3 - 1 - 1; // 3 chars for op, 1 for '=', 1 for var
-                for (k = 0; k < op_spaces; k++) printf(" ");
-
-                printf("|   ");
-
-                /* Build the new expression */
-                j = 0;
-                /* Copy until before the operation */
-                for (k = 0; k < i; k++) {
-                    result[j++] = expression[k];
+            /* If we find an operator, search FORWARD for two numbers */
+            if (is_operator(expression[i])) {
+                int pos_op = i;
+                pos_num1 = i + 1;
+                /* Skip spaces after operator */
+                while (pos_num1 < length && expression[pos_num1] == ' ') {
+                    pos_num1++;
                 }
-                /* Insert the new variable */
-                result[j++] = new_var;
-                /* Copy the rest of the expression (skipping the 3 characters) */
-                for (k = i + 3; k < length; k++) {
-                    result[j++] = expression[k];
-                }
-                result[j] = '\0';
-
-                /* Print the resulting expression with the new variable highlighted */
-                for (k = 0; k < strlen(result); k++) {
-                    if (k == i) { // Highlight the new variable at its position
-                        color_green();
-                        printf("%c", result[k]);
-                        color_normal();
-                    } else {
-                        printf("%c", result[k]);
+                /* Check if there's a number after the operator */
+                if (pos_num1 < length && isdigit(expression[pos_num1])) {
+                    /* Extract first number */
+                    advance_num1 = extract_number(expression, pos_num1, num1);
+                    pos_after_num1 = pos_num1 + advance_num1;
+                    /* Skip spaces between numbers */
+                    while (pos_after_num1 < length && expression[pos_after_num1] == ' ') {
+                        pos_after_num1++;
                     }
-                    if (k < strlen(result) - 1) printf(" ");
+                    /* Check if there's a second number (not another operator) */
+                    if (pos_after_num1 < length && isdigit(expression[pos_after_num1])) {
+                        /* Extract second number */
+                        advance_num2 = extract_number(expression, pos_after_num1, num2);
+                        pos_after_num2 = pos_after_num1 + advance_num2;
+
+                        /* Calculate the real result of the operation */
+                        int a = atoi(num1);
+                        int b = atoi(num2);
+                        int operation_result;
+
+                        /* Perform the corresponding operation */
+                        switch (expression[pos_op]) {
+                            case '+':
+                                operation_result = a + b;
+                                break;
+                            case '-':
+                                operation_result = a - b;
+                                break;
+                            case '*':
+                                operation_result = a * b;
+                                break;
+                            case '/':
+                                if (b != 0) {
+                                    operation_result = a / b;
+                                } else {
+                                    operation_result = 0;  /* Division by zero */
+                                }
+                                break;
+                            case '^':
+                                operation_result = power(a, b);
+                                break;
+                            default:
+                                operation_result = 0;
+                        }
+
+                        /* Build the operation string for display */
+                        sprintf(operation_str, "%c%s%s", expression[pos_op], num1, num2);
+                        sprintf(new_num_str, "%d", operation_result);
+
+                        /* Print the found operation */
+                        printf("|  %3d  |   ", step);
+                        color_blue();
+                        printf("%s", operation_str);
+                        color_normal();
+                        printf(" = ");
+                        color_green();
+                        printf("%s", new_num_str);
+                        color_normal();
+
+                        /* Spaces for alignment */
+                        int op_spaces = 30 - strlen(operation_str) - strlen(new_num_str);
+                        for (k = 0; k < op_spaces; k++) printf(" ");
+
+                        printf("|   ");
+
+                        /* Build the new expression */
+                        j = 0;
+                        /* Copy until before the operator */
+                        for (k = 0; k < pos_op; k++) {
+                            result[j++] = expression[k];
+                        }
+                        /* Insert the new number */
+                        for (k = 0; k < strlen(new_num_str); k++) {
+                            result[j++] = new_num_str[k];
+                        }
+                        /* Copy the rest of the expression (after the second number) */
+                        for (k = pos_after_num2; k < length; k++) {
+                            result[j++] = expression[k];
+                        }
+                        result[j] = '\0';
+
+                        /* Print the resulting expression with the new number highlighted */
+                        int pos_new = pos_op;
+                        int len_new = strlen(new_num_str);
+                        for (k = 0; k < strlen(result); k++) {
+                            if (k >= pos_new && k < pos_new + len_new) {
+                                if (k == pos_new) color_green();
+                                printf("%c", result[k]);
+                                if (k == pos_new + len_new - 1) color_normal();
+                            } else {
+                                printf("%c", result[k]);
+                            }
+                        }
+
+                        /* Complete spaces */
+                        int spaces = 45 - strlen(result);
+                        for (k = 0; k < spaces; k++) printf(" ");
+
+                        printf(" |\n");
+
+                        /* Update the expression */
+                        strcpy(expression, result);
+                        new_num--;  /* Next number (99, 98, 97, ...) */
+                        changes = 1;
+                        operation_found = 1;
+                        step++;
+
+                        /* Check if there are still operators */
+                        int has_operators = 0;
+                        for (k = 0; k < strlen(expression); k++) {
+                            if (is_operator(expression[k])) {
+                                has_operators = 1;
+                                break;
+                            }
+                        }
+                        if (has_operators) {
+                            printf("|-------------------------------------------------------------------------------------------------|\n");
+                        }
+                    }
                 }
-
-                /* Complete spaces */
-                int spaces = 45 - (strlen(result) * 2 - 1);
-                for (k = 0; k < spaces; k++) printf(" ");
-
-                printf(" |\n");
-
-                /* Update the expression */
-                strcpy(expression, result);
-                new_var--;  /* Next variable (Z, Y, X, ...) */
-                changes = 1;
-                break;  /* Restart search from the beginning */
             }
         }
     }
@@ -805,21 +931,21 @@ void evaluate_prefix_letters(const char *prefix) {
     printf(" |\n");
     printf("|                                                                                                 |\n");
 
-    /* Check if only a letter remains */
-    int only_letter = 1;
-    int has_letter = 0;
+    /* Check if only a number remains (could be multi-digit) */
+    int only_number = 1;
+    int has_digit = 0;
     for (i = 0; i < strlen(expression); i++) {
-        if (isalpha(expression[i])) {
-            has_letter = 1;
+        if (isdigit(expression[i])) {
+            has_digit = 1;
         } else if (expression[i] != ' ') {
-            only_letter = 0;
+            only_number = 0;
             break;
         }
     }
 
-    if (only_letter && has_letter) {
+    if (only_number && has_digit) {
         color_green();
-        printf("|   Status: SUCCESSFUL VERIFICATION - Expression reduced to a single letter                     |\n");
+        printf("|   Status: SUCCESSFUL VERIFICATION - Expression reduced to a single number                     |\n");
         color_normal();
     } else {
         color_red();
@@ -961,8 +1087,8 @@ int main(void) {
         printf("  Conversion completed successfully\n");
         color_normal();
 
-        /* Perform verification of the prefix expression (using letters) */
-        evaluate_prefix_letters(prefix); // <-- Llamada a la nueva función de verificación con letras
+        /* Perform verification of the prefix expression */
+        evaluate_prefix(prefix);
 
         printf("\n");
         color_yellow();

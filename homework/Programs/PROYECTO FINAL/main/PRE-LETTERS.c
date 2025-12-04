@@ -1,60 +1,55 @@
-//PRE-LETTERS Portable Version with Prefix Verification (English)
+// PRE-LETTERS Portable Version
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-// #include <windows.h> // Eliminado
 #include "stack.h"
 #include "dlist.h"
 #include "list.h"
 #define MAX_EXPR 256
 
-// --- Definiciones de Secuencias VT100 ---
+// --- VT100 Sequence Definitions ---
 #define RESET_COLOR "\033[0m"
 #define COLOR_RED "\033[1;31m"
 #define COLOR_GREEN "\033[1;32m"
 #define COLOR_YELLOW "\033[1;33m"
 #define COLOR_BLUE "\033[1;34m"
-// Opcional: Puedes definir más si lo deseas
-// #define COLOR_MAGENTA "\033[1;35m"
-// #define COLOR_CYAN "\033[1;36m"
-// #define COLOR_WHITE "\033[1;37m"
 
-// --- Función para limpiar pantalla portable ---
+// --- Portable screen clear function ---
 void clear_screen() {
     printf("\033[2J\033[H");
-    fflush(stdout); // Asegura que la limpieza se aplique inmediatamente
+    fflush(stdout);
 }
 
 /*
     Restore original color
 */
-void color_normal() {
+void reset_color() {
     printf(RESET_COLOR);
 }
 
 /*
     Set blue color
 */
-void color_blue() {
+void set_blue() {
     printf(COLOR_BLUE);
 }
 
 /*
     Set green color
 */
-void color_green() {
+void set_green() {
     printf(COLOR_GREEN);
 }
 
-void color_yellow() {
+void set_yellow() {
     printf(COLOR_YELLOW);
 }
 
 /*
     Set red color
 */
-void color_red() {
+void set_red() {
     printf(COLOR_RED);
 }
 
@@ -91,9 +86,9 @@ int validate_syntax(const char *infix) {
     
     /* Check for empty expression */
     if (len == 0) {
-        color_red();
+        set_red();
         printf("\n  ERROR: The expression is empty\n");
-        color_normal();
+        reset_color();
         return 0;
     }
     
@@ -105,9 +100,9 @@ int validate_syntax(const char *infix) {
         
         /* Check for invalid characters */
         if (!isalnum(c) && !is_operator(c) && c != '(' && c != ')') {
-            color_red();
+            set_red();
             printf("\n  ERROR: Invalid character '%c' at position %d\n", c, i + 1);
-            color_normal();
+            reset_color();
             return 0;
         }
         
@@ -116,9 +111,9 @@ int validate_syntax(const char *infix) {
             parenthesis_balance++;
             /* Cannot have operand before ( */
             if (last_was_operand) {
-                color_red();
+                set_red();
                 printf("\n  ERROR: Missing operator before parenthesis '(' at position %d\n", i + 1);
-                color_normal();
+                reset_color();
                 return 0;
             }
             last_was_operator = 0;
@@ -128,23 +123,23 @@ int validate_syntax(const char *infix) {
             parenthesis_balance--;
             /* Check for negative balance */
             if (parenthesis_balance < 0) {
-                color_red();
+                set_red();
                 printf("\n  ERROR: Closing parenthesis ')' without opening at position %d\n", i + 1);
-                color_normal();
+                reset_color();
                 return 0;
             }
             /* Cannot have operator before ) */
             if (last_was_operator) {
-                color_red();
+                set_red();
                 printf("\n  ERROR: Missing operand before parenthesis ')' at position %d\n", i + 1);
-                color_normal();
+                reset_color();
                 return 0;
             }
             /* Cannot have ( followed by ) */
             if (last_char == '(') {
-                color_red();
+                set_red();
                 printf("\n  ERROR: Empty parentheses '()' at position %d\n", i + 1);
-                color_normal();
+                reset_color();
                 return 0;
             }
             last_was_operator = 0;
@@ -154,9 +149,9 @@ int validate_syntax(const char *infix) {
         else if (isalnum(c)) {
             /* Cannot have two consecutive operands */
             if (last_was_operand) {
-                color_red();
+                set_red();
                 printf("\n  ERROR: Two consecutive operands at position %d (missing operator)\n", i + 1);
-                color_normal();
+                reset_color();
                 return 0;
             }
             last_was_operand = 1;
@@ -166,23 +161,23 @@ int validate_syntax(const char *infix) {
         else if (is_operator(c)) {
             /* Cannot have two consecutive operators */
             if (last_was_operator) {
-                color_red();
+                set_red();
                 printf("\n  ERROR: Two consecutive operators at position %d\n", i + 1);
-                color_normal();
+                reset_color();
                 return 0;
             }
             /* Cannot start with operator (except - for negatives, but simplified here) */
             if (i == 0) {
-                color_red();
+                set_red();
                 printf("\n  ERROR: Expression cannot start with an operator\n");
-                color_normal();
+                reset_color();
                 return 0;
             }
             /* Cannot have operator after ( */
             if (last_char == '(') {
-                color_red();
+                set_red();
                 printf("\n  ERROR: Operator '%c' after parenthesis '(' at position %d\n", c, i + 1);
-                color_normal();
+                reset_color();
                 return 0;
             }
             last_was_operator = 1;
@@ -194,24 +189,24 @@ int validate_syntax(const char *infix) {
     
     /* Check final parentheses balance */
     if (parenthesis_balance > 0) {
-        color_red();
+        set_red();
         printf("\n  ERROR: Missing %d closing parentheses ')'\n", parenthesis_balance);
-        color_normal();
+        reset_color();
         return 0;
     }
     
     /* Cannot end with operator */
     if (last_was_operator) {
-        color_red();
+        set_red();
         printf("\n  ERROR: Expression cannot end with an operator\n");
-        color_normal();
+        reset_color();
         return 0;
     }
     
     /* If we got here, syntax is valid */
-    color_green();
+    set_green();
     printf("\n  Valid syntax\n");
-    color_normal();
+    reset_color();
     return 1;
 }
 
@@ -268,9 +263,9 @@ void print_stack(Stack *stack, char new_element, int highlight) {
     /* The last entered element (top) is shown on the LEFT */
     for (i = 0; i < count; i++) {
         if (highlight && i == 0 && elements[i] == new_element) {
-            color_blue();
+            set_blue();
             printf("%c", elements[i]);
-            color_normal();
+            reset_color();
         } else {
             printf("%c", elements[i]);
         }
@@ -316,9 +311,9 @@ void print_colored_operation(const char *operation, int length, int highlight_la
     
     for (i = 0; i < length; i++) {
         if (highlight_last && i == length - 1) {
-            color_blue();
+            set_blue();
             printf("%c", operation[i]);
-            color_normal();
+            reset_color();
         } else {
             printf("%c", operation[i]);
         }
@@ -352,24 +347,24 @@ void infix_to_prefix(const char *infix, char *prefix) {
     stack_init(&stack, free);
     
     printf("\n");
-    color_green();
+    set_green();
     printf("+-------------------------------------------------------------------------------------------------+\n");
     printf("|                          CONVERSION FROM INFIX TO PREFIX                                        |\n");
     printf("|                                STEP BY STEP ALGORITHM                                           |\n");
     printf("+-------------------------------------------------------------------------------------------------+\n");
-    color_normal();
+    reset_color();
     
     printf("\n");
-    color_yellow();
+    set_yellow();
     printf("  Entered Infix Expression: ");
-    color_blue();
+    set_blue();
     printf("%s\n", infix);
-    color_normal();
+    reset_color();
     
     printf("  Traversal Method: ");
-    color_green();
+    set_green();
     printf("RIGHT -> LEFT");
-    color_normal();
+    reset_color();
     printf(" (last element first)\n\n");
     
     printf("+-----------------------------------------------------------------------------------------------------------------+\n");
@@ -445,7 +440,7 @@ void infix_to_prefix(const char *infix, char *prefix) {
                     temp_operation[j++] = *op_ptr;
                     temp_operation[j] = '\0';
                     
-                    printf("|  %3d  | POP [%c] (find '(') ", step, *op_ptr);
+                    printf("|  %3d  | POP [%c] (search ')') ", step, *op_ptr);
                     printf("|    ");
                     print_stack(&stack, '\0', 0);
                     printf(" | ");
@@ -508,9 +503,9 @@ void infix_to_prefix(const char *infix, char *prefix) {
     /* Separator before emptying stack */
     if (stack_size(&stack) > 0) {
         printf("|-------+--------------------------+-------------------------+-----------------------------|\n");
-        color_yellow();
+        set_yellow();
         printf("|       |     EMPTYING STACK       |                         |                             |\n");
-        color_normal();
+        reset_color();
         printf("|-------+--------------------------+-------------------------+-----------------------------|\n");
     }
     
@@ -565,17 +560,17 @@ void infix_to_prefix(const char *infix, char *prefix) {
     
     printf("\n");
     printf("+-------------------------------------------------------------------------------------------------+\n");
-    color_yellow();
+    set_yellow();
     printf("|                           FINAL STEP: INVERT RESULT                                            |\n");
-    color_normal();
+    reset_color();
     printf("|-------------------------------------------------------------------------------------------------|\n");
     printf("|                                                                                                 |\n");
     printf("|   Before inversion:   %-60s |\n", temp_operation);
     printf("|                                                                                                 |\n");
     printf("|   After inversion:    ");
-    color_blue();
+    set_blue();
     printf("%-58s", prefix);
-    color_normal();
+    reset_color();
     printf(" |\n");
     printf("|                                                                                                 |\n");
     printf("|   Method used: DLIST (reading from TAIL to HEAD)                                               |\n");
@@ -590,51 +585,50 @@ void infix_to_prefix(const char *infix, char *prefix) {
     Function to evaluate prefix expression through traversals
     Identifies binary operations of the form: operator letter letter
     For example: +ab is evaluated and replaced with a new variable
-    MODIFIED: Uses VT100 colors and improved consistency
 */
-void evaluate_prefix_letters(const char *prefix) {
+void evaluate_prefix(const char *prefix) {
     char expression[MAX_EXPR];
     char result[MAX_EXPR];
     int i, j, k;
     int step = 1;
-    char new_var = 'Z';  /* Variable to be used to replace operations (Z, Y, X, ...) */
+    char new_var = 'z';  /* Variable to be used to replace operations */
     int changes = 1;
     int length;
     
-    strcpy(expression, prefix); // Copia la expresión original para trabajar con ella
+    strcpy(expression, prefix);
     
     printf("\n");
-    color_green();
+    set_green();
     printf("+-------------------------------------------------------------------------------------------------+\n");
     printf("|                          PREFIX EXPRESSION VERIFICATION                                        |\n");
     printf("|                              STEP BY STEP EVALUATION                                           |\n");
     printf("+-------------------------------------------------------------------------------------------------+\n");
-    color_normal();
+    reset_color();
     
     printf("\n");
-    color_yellow();
+    set_yellow();
     printf("  Prefix Expression to Verify: ");
-    color_blue();
+    set_blue();
     printf("%s\n", expression);
-    color_normal();
+    reset_color();
     
     printf("  Method: Search for binary operations of the form: ");
-    color_green();
+    set_green();
     printf("operator letter letter");
-    color_normal();
+    reset_color();
     printf("\n\n");
     
     printf("+-------------------------------------------------------------------------------------------------+\n");
     printf("|  STEP |         OPERATION FOUND              |         RESULTING EXPRESSION                    |\n");
     printf("|-------------------------------------------------------------------------------------------------|\n");
     
-    /* Iterate until no more changes can be made */
+    /* Iterate until no more changes */
     while (changes) {
         changes = 0;
         length = strlen(expression);
         
         /* Search for binary operations: operator followed by two operands */
-        for (i = 0; i < length - 2; i++) { // Buscamos patrones de 3 caracteres
+        for (i = 0; i < length - 2; i++) {
             /* If we find an operator followed by two letters */
             if (is_operator(expression[i]) &&
                 isalpha(expression[i+1]) &&
@@ -642,19 +636,14 @@ void evaluate_prefix_letters(const char *prefix) {
                 
                 /* Print the found operation */
                 printf("|  %3d  |   ", step);
-                color_blue();
+                set_blue();
                 printf("%c%c%c", expression[i], expression[i+1], expression[i+2]);
-                color_normal();
+                reset_color();
                 printf(" = ");
-                color_green();
+                set_green();
                 printf("%c", new_var);
-                color_normal();
-                
-                /* Spaces for alignment */
-                int op_spaces = 30 - 3 - 1 - 1; // 3 chars for op, 1 for '=', 1 for var
-                for (k = 0; k < op_spaces; k++) printf(" ");
-                
-                printf("|   ");
+                reset_color();
+                printf("                       |   ");
                 
                 /* Build the new expression */
                 j = 0;
@@ -672,10 +661,10 @@ void evaluate_prefix_letters(const char *prefix) {
                 
                 /* Print the resulting expression with the new variable highlighted */
                 for (k = 0; k < strlen(result); k++) {
-                    if (k == i) { // Highlight the new variable at its position
-                        color_green();
+                    if (k == i) {
+                        set_green();
                         printf("%c", result[k]);
-                        color_normal();
+                        reset_color();
                     } else {
                         printf("%c", result[k]);
                     }
@@ -685,28 +674,19 @@ void evaluate_prefix_letters(const char *prefix) {
                 /* Complete spaces */
                 int spaces = 45 - (strlen(result) * 2 - 1);
                 for (k = 0; k < spaces; k++) printf(" ");
-                
-                printf(" |\n");
+                printf("|\n");
                 
                 /* Update the expression */
                 strcpy(expression, result);
-                new_var--;  /* Next variable (Z, Y, X, ...) */
-                changes = 1;  /* Mark that a change was made */
-                step++;       /* Increment step counter */
+                new_var--;  /* Next variable (z, y, x, ...) */
+                changes = 1;
+                step++;
                 
-                /* Add separator if there are still operators */
-                int has_operators = 0;
-                for (k = 0; k < strlen(expression); k++) {
-                    if (is_operator(expression[k])) {
-                        has_operators = 1;
-                        break;
-                    }
-                }
-                if (has_operators) {
+                if (strlen(expression) > 1) {
                     printf("|-------------------------------------------------------------------------------------------------|\n");
                 }
                 
-                break;  /* Restart search from the beginning after a change */
+                break;  /* Restart search from the beginning */
             }
         }
     }
@@ -714,39 +694,39 @@ void evaluate_prefix_letters(const char *prefix) {
     printf("+-------------------------------------------------------------------------------------------------+\n");
     
     printf("\n");
-    color_green();
+    set_green();
     printf("+-------------------------------------------------------------------------------------------------+\n");
     printf("|                                FINAL VERIFICATION RESULT                                        |\n");
     printf("|-------------------------------------------------------------------------------------------------|\n");
-    color_normal();
+    reset_color();
     printf("|                                                                                                 |\n");
     printf("|   Original Expression:  ");
-    color_yellow();
+    set_yellow();
     printf("%-60s", prefix);
-    color_normal();
+    reset_color();
     printf(" |\n");
     printf("|                                                                                                 |\n");
     printf("|   Final Result:         ");
-    color_blue();
+    set_blue();
     printf("%-60s", expression);
-    color_normal();
+    reset_color();
     printf(" |\n");
     printf("|                                                                                                 |\n");
     
-    if (strlen(expression) == 1 && isalpha(expression[0])) {
-        color_green();
+    if (strlen(expression) == 1) {
+        set_green();
         printf("|   Status: SUCCESSFUL VERIFICATION - Expression reduced to a single variable                    |\n");
-        color_normal();
+        reset_color();
     } else {
-        color_red();
+        set_red();
         printf("|   Status: INCONCLUSIVE VERIFICATION - Expression not completely reduced                        |\n");
-        color_normal();
+        reset_color();
     }
     
     printf("|                                                                                                 |\n");
-    color_green();
+    set_green();
     printf("+-------------------------------------------------------------------------------------------------+\n");
-    color_normal();
+    reset_color();
 }
 
 /*
@@ -759,17 +739,16 @@ int main(void) {
     
     do {
         clear_screen();  /* Clear screen on each iteration - Portable version */
-        // system("cls");  /* Clear screen on each iteration - Quitamos dependencia de windows */
         
         printf("\n\n");
-        color_green();
+        set_green();
         printf("+-------------------------------------------------------------------------------------------------+\n");
         printf("|                                                                                                 |\n");
         printf("|                       INFIX TO PREFIX CALCULATOR                                                |\n");
         printf("|                         STEP BY STEP CONVERSION                                                 |\n");
         printf("|                                                                                                 |\n");
         printf("+-------------------------------------------------------------------------------------------------+\n");
-        color_normal();
+        reset_color();
         
         printf("\n");
         printf("+-------------------------------------------------------------------------------------------------+\n");
@@ -793,16 +772,16 @@ int main(void) {
         printf("|   OPERATION COLUMN: Filled from LEFT TO RIGHT                                                  |\n");
         printf("|                                                                                                 |\n");
         printf("|  POP IS DONE WHEN:                                                                              |\n");
-        printf("|     Parentheses close: ( )                                                                    |\n");
-        printf("|     PUSH to operation of LOWER OR EQUAL hierarchy                                             |\n");
-        printf("|     No more elements to add (empty the STACK)                                                 |\n");
+        printf("|     Parentheses are closed: ( )                                                                |\n");
+        printf("|     About to PUSH to operation of LOWER OR EQUAL hierarchy                                     |\n");
+        printf("|     No more elements to add (empty the STACK)                                                  |\n");
         printf("|                                                                                                 |\n");
         printf("|  FINAL STEP: INVERT the complete result                                                         |\n");
         printf("|                                                                                                 |\n");
         printf("|  NOTE: New elements appear in ");
-        color_blue();
+        set_blue();
         printf("BLUE COLOR");
-        color_normal();
+        reset_color();
         printf("                                                          |\n");
         printf("|                                                                                                 |\n");
         printf("+-------------------------------------------------------------------------------------------------+\n");
@@ -817,9 +796,9 @@ int main(void) {
         printf("+-------------------------------------------------------------------------------------------------+\n");
         
         printf("\n");
-        color_yellow();
+        set_yellow();
         printf("  -> Enter the infix expression (without spaces): ");
-        color_normal();
+        reset_color();
         fgets(infix, MAX_EXPR, stdin);
         
         /* Remove newline */
@@ -828,17 +807,17 @@ int main(void) {
         /* VALIDATE SYNTAX BEFORE CONVERTING */
         if (!validate_syntax(infix)) {
             printf("\n");
-            color_red();
+            set_red();
             printf("  The expression contains errors. Please correct the syntax.\n");
-            color_normal();
+            reset_color();
             printf("\n");
-            color_yellow();
+            set_yellow();
             printf("  Want to try another expression? (y/n): ");
-            color_normal();
+            reset_color();
             continue_char = getchar();
             while (getchar() != '\n');  /* Clear buffer */
             
-            if (continue_char != 'y' && continue_char != 'Y') {
+            if (continue_char != 's' && continue_char != 'S') {
                 break;  /* Exit loop if doesn't want to continue */
             }
             continue;  /* Ask for expression again */
@@ -848,49 +827,49 @@ int main(void) {
         infix_to_prefix(infix, prefix);
         
         printf("\n");
-        color_green();
+        set_green();
         printf("+-------------------------------------------------------------------------------------------------+\n");
         printf("|                                FINAL RESULT                                                     |\n");
         printf("|-------------------------------------------------------------------------------------------------|\n");
-        color_normal();
+        reset_color();
         printf("|                                                                                                 |\n");
         printf("|   Infix Expression:   ");
-        color_yellow();
+        set_yellow();
         printf("%-60s", infix);
-        color_normal();
+        reset_color();
         printf(" |\n");
         printf("|                                                                                                 |\n");
         printf("|   Prefix Expression:  ");
-        color_blue();
+        set_blue();
         printf("%-60s", prefix);
-        color_normal();
+        reset_color();
         printf(" |\n");
         printf("|                                                                                                 |\n");
-        color_green();
+        set_green();
         printf("+-------------------------------------------------------------------------------------------------+\n");
-        color_normal();
+        reset_color();
         
         printf("\n");
-        color_green();
+        set_green();
         printf("  Conversion successfully completed\n");
-        color_normal();
+        reset_color();
         
-        /* Perform verification of the prefix expression */
-        evaluate_prefix_letters(prefix); // <-- Llamada a la función de verificación (renombrada)
+        /* Perform prefix expression verification */
+        evaluate_prefix(prefix);
         
         printf("\n");
-        color_yellow();
+        set_yellow();
         printf("  Want to convert another expression? (y/n): ");
-        color_normal();
+        reset_color();
         continue_char = getchar();
         while (getchar() != '\n');  /* Clear buffer */
         
-    } while (continue_char == 'y' || continue_char == 'Y');
+    } while (continue_char == 's' || continue_char == 'S');
     
     printf("\n");
-    color_green();
+    set_green();
     printf("  Thank you for using the calculator. Goodbye!\n");
-    color_normal();
+    reset_color();
     printf("\n");
     
     return 0;
